@@ -1,0 +1,50 @@
+name: DA Publish
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to commit data.json
+
+concurrency:
+  group: da-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Publish next item
+        env:
+          DA_CLIENT_ID: ${{ secrets.DA_CLIENT_ID }}
+          DA_CLIENT_SECRET: ${{ secrets.DA_CLIENT_SECRET }}
+          DA_REFRESH_TOKEN: ${{ secrets.DA_REFRESH_TOKEN }}
+        run: python main.py
+
+      # Refresh tokens are single-use: store the rotated one for the next run.
+      # Runs even if publishing failed, because the token was already rotated.
+      - name: Save rotated refresh token
+        if: always() && hashFiles('.refresh_token') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: gh secret set DA_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < .refresh_token
+
+      - name: Commit publish state
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --staged --quiet || (git commit -m "Mark item published [skip ci]" && git push)
