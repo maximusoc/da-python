@@ -26,7 +26,8 @@ def get_access_token(client_id, client_secret):
         },
         timeout=30,
     )
-    r.raise_for_status()
+    if not r.ok:
+        raise SystemExit(f"Token request failed: {r.status_code} {r.text}")
     data = r.json()
     # DeviantArt refresh tokens are single-use; keep the new one.
     REFRESH_TOKEN_FILE.write_text(data["refresh_token"])
