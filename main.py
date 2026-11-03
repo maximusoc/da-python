@@ -54,7 +54,10 @@ def save(items):
 
 def main():
     items = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-    item = next((i for i in items if not i.get("published_deviationid")), None)
+    item = next(
+        (i for i in items if i.get("da_stash_id") and not i.get("published_deviationid")),
+        None,
+    )
     if item is None:
         print("Nothing left to publish.")
         return
