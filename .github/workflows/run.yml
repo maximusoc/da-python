@@ -2,7 +2,7 @@ name: DA Publish
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/14 * * * *"
   workflow_dispatch:
 
 permissions:
